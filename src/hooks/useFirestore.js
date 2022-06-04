@@ -1,6 +1,6 @@
 
 
-import { addDoc, collection, deleteDoc, doc, Timestamp } from "firebase/firestore"
+import { addDoc, collection, deleteDoc, doc, Timestamp, updateDoc } from "firebase/firestore"
 import { useReducer, useState, useEffect } from "react"
 import { db } from '../firebase/config'
 
@@ -19,6 +19,10 @@ const firestoreReducer = (state, action) => {
       return { isPending: false, document: action.payload, success: true, error: null }
     case 'DELETED_DOCUMENT':
       return { isPending: false, document: null, success: true, error: null }
+    case 'UPDATED_DOCUMENT':
+      return {
+        isPending: false, document: action.payload, success: true, error: null
+      }
     case 'ERROR':
       return { isPending: false, document: null, success: false, error: action.payload }
 
@@ -33,6 +37,8 @@ export const useFirestore = (collectn) => {
 
   // Collection Ref
   const ref = collection(db, collectn)
+
+
 
   // Only dispatch is not cancelled
   const dispatchIfNotCancelled = (action) => {
@@ -70,10 +76,26 @@ export const useFirestore = (collectn) => {
     }
   }
 
+
+  // update documents
+  const updateDocument = async (id, updates) => {
+    dispatch({ type: 'IS_PENDING' })
+
+    try {
+      const updatedDocument = await updateDoc(doc(db, collectn, id), updates)
+      dispatchIfNotCancelled({ type: 'UPDATED_DOCUMENT', payload: updatedDocument })
+      return updatedDocument
+
+    } catch (err) {
+      dispatchIfNotCancelled({ type: 'ERROR', payload: err.message })
+      return null
+    }
+  }
+
   // Clean up function
   useEffect(() => {
     return () => setIsCancelled(true)
   }, [])
 
-  return { addDocument, deleteDocument, response }
+  return { addDocument, deleteDocument, updateDocument, response }
 }
